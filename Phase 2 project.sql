@@ -86,9 +86,6 @@ group by to_char(transaction_date,'day')
 order by transaction_count desc
 limit 1;
 
-
--- ## Advanced-Level Questions.
-
 -- 11.Find the top 3 customers who have spent the most in the last 12 months. 
 
 select customer_id,first_name,last_name,city,
@@ -110,60 +107,7 @@ from sales_transactions
 group by category
 order by revenue_percentage desc;
 
--- 13.Find the month-over-month sales growth for the last 12 months.  
-
-WITH monthly_sales AS (
-    SELECT 
-        TO_CHAR(transaction_date, 'MM') AS sales_month, 
-        SUM(total_amount) AS total_monthly_sales
-    FROM sales_transactions
-    WHERE transaction_date >= CURRENT_DATE - INTERVAL '12 months'
-    GROUP BY sales_month
-)
-SELECT 
-    sales_month,
-    total_monthly_sales,
-    total_monthly_sales - LAG(total_monthly_sales) OVER(ORDER BY sales_month) AS sales_difference,
-    (total_monthly_sales - LAG(total_monthly_sales) OVER(ORDER BY sales_month)) / 
-    NULLIF(LAG(total_monthly_sales) OVER(ORDER BY sales_month), 0) AS sales_growth_rate
-FROM monthly_sales
-ORDER BY sales_month;
-
---14.Identify customers who have increased their spending by at least 30% compared to the previous year.
-
-WITH monthly_sales AS (
-    SELECT 
-        customer_id,
-        to_char(transaction_date,'month') AS sales_month,
-        SUM(total_amount) AS total_monthly_sales
-    FROM sales_transactions
-    GROUP BY customer_id, to_char(transaction_date,'month')
-),
-sales_growth AS (
-    SELECT 
-        customer_id,
-        sales_month,
-        total_monthly_sales,
-        LAG(total_monthly_sales) OVER (PARTITION BY customer_id ORDER BY sales_month) AS previous_month_sales,
-        CASE 
-            WHEN LAG(total_monthly_sales) OVER (PARTITION BY customer_id ORDER BY sales_month) = 0 THEN NULL
-            ELSE 
-                (total_monthly_sales - LAG(total_monthly_sales) OVER (PARTITION BY customer_id ORDER BY sales_month)) 
-                / LAG(total_monthly_sales) OVER (PARTITION BY customer_id ORDER BY sales_month)
-        END AS sales_growth_rate
-    FROM monthly_sales
-)
-SELECT 
-    customer_id,
-    sales_month,
-    total_monthly_sales,
-    previous_month_sales
-FROM sales_growth
-WHERE sales_growth_rate >= 0.3
-ORDER BY customer_id, sales_month;
-
-
--- 15.Find the first purchase date for each customer.
+-- 13.Find the first purchase date for each customer.
 
 select first_name,last_name, MIN(transaction_date) as first_purchase_date
 from sales_transactions st
